@@ -2,7 +2,7 @@ import torch
 import numpy as np
 from gtda.time_series import SlidingWindow
 from DDA_TRA.train import DDA_TRA_train
-from DDA_TRA.util import log_and_print
+from DDA_TRA.util import log_and_print, matrix_to_string
 from utils import get_DDA_TRA_data
 import math
 
@@ -95,6 +95,7 @@ optim_Adam_weight_decay = 5e-4
 optim_Adam_beta = 0.5
 device = DEVICE
 file_name = 'M4_DDA_TRA_' + str(DATASET_NAME) + '_' + str(source_user) + '_' + str(target_user) + '_output.txt'
+file_name_summary = 'M4_DDA_TRA_' + str(DATASET_NAME) + '_' + str(source_user) + '_' + str(target_user) + '_output____________summary.txt'
 # /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 for local_epoch_common in [5, 10, 20, 30]:
     for local_epoch_RNN in [2, 5, 10, 20, 30, 50, 100]:
@@ -117,9 +118,32 @@ for local_epoch_common in [5, 10, 20, 30]:
                                                                                                batch_size=10000, num_D=num_D,
                                                                                                width=width, device=device)
 
-                            target_acc = DDA_TRA_train(S_torch_loader, T_torch_loader, ST_torch_loader, global_epoch, local_epoch_common,
-                                                       local_epoch_RNN,
-                                                       local_epoch_temporal, time_lag_value,
-                                                       conv1_in_channels, conv1_out_channels, conv2_out_channels,
-                                                       full_connect_num, Num_classes, kernel_size, In_features_size, GRL_alpha,
-                                                       lr_decay, lr, optim_Adam_weight_decay, optim_Adam_beta, file_name, device)
+                            best_target_acc, best_target_cm = DDA_TRA_train(S_torch_loader, T_torch_loader,
+                                                                            ST_torch_loader, global_epoch,
+                                                                            local_epoch_common,
+                                                                            local_epoch_RNN,
+                                                                            local_epoch_temporal, time_lag_value,
+                                                                            conv1_in_channels, conv1_out_channels,
+                                                                            conv2_out_channels,
+                                                                            full_connect_num, Num_classes, kernel_size,
+                                                                            In_features_size, GRL_alpha,
+                                                                            lr_decay, lr, optim_Adam_weight_decay,
+                                                                            optim_Adam_beta, file_name, device)
+                            print()
+                            log_and_print(
+                                content='para_setting:' + str(local_epoch_common) + '_' + str(
+                                    local_epoch_RNN) + '_' + str(local_epoch_temporal) + '_' + str(
+                                    GRL_alpha) + '_' + str(full_connect_num) + '_' + str(
+                                    lr) + '_' + str(time_lag_value), filename=file_name_summary)
+                            log_and_print(
+                                content='best target acc:' + str(best_target_acc),
+                                filename=file_name_summary)
+                            log_and_print(
+                                content='best cm:',
+                                filename=file_name_summary)
+                            log_and_print(
+                                content=matrix_to_string(best_target_cm),
+                                filename=file_name_summary)
+                            log_and_print(
+                                content='-------------------------------------------------',
+                                filename=file_name_summary)

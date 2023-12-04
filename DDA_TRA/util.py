@@ -44,4 +44,4 @@ def set_random_seed(seed=0):
 
 
 def matrix_to_string(matrix):
-    return '\n'.join(['\t'.join(map(str, row)) for row in matrix])
+    return '\n'.join([','.join(map(str, row)) for row in matrix])
