@@ -71,6 +71,7 @@ T_label = [int(x) for x in T_label]
 # /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 # model training paras settings
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+DEVICE = torch.device("cuda:1")
 lr_decay = 1.0
 lr = 1e-2
 num_D = 6
