@@ -174,7 +174,9 @@ class CNNRNNModel(nn.Module):
         return loss
 
     def predict(self, x):
-        return self.class_classifier(self.feature(x))
+        feature = self.feature(x)
+        feature = feature.view(-1, self.conv2_out_channels * feature.size(-1))
+        return self.class_classifier(feature)
 
 class GRUWithLayerNorm(nn.Module):
     def __init__(self, input_size, hidden_size, layer_norm_size, num_layers=1, batch_first=True, dropout=0, bias=False, eps=0):
