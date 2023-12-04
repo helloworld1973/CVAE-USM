@@ -1,16 +1,10 @@
-import math
-import random
-import numpy as np
 import torch
+import numpy as np
 from gtda.time_series import SlidingWindow
-from matplotlib import pyplot as plt
-import torch.utils.data as Data
-
-from DANN.train import DANN_train
-from DGTSDA_temporal_diff.train import DGTSDA_temporal_diff_train
-from DGTSDA_temporal_diff.utils.util import log_and_print, matrix_to_string
-from TrC.train import TrC_train
-from utils import get_DGTSDA_temporal_diff_train_data, get_DANN_data, get_TrC_Source_user_data, get_TrC_Target_user_data
+from DDA_TRA.train import DDA_TRA_train
+from DDA_TRA.util import log_and_print
+from utils import get_DDA_TRA_data
+import math
 
 # /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 # OPPT_dataset
@@ -75,127 +69,56 @@ for index, a_act in enumerate(activities_required):
 S_label = [int(x) for x in S_label]
 T_label = [int(x) for x in T_label]
 # /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-
-# /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 # model training paras settings
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-lr = 1e-3
+lr_decay = 1.0
+lr = 1e-2
 num_D = 6
-width = Sampling_frequency * Num_Seconds
+width = int(Sampling_frequency * Num_Seconds)
 Num_classes = 19
-Epochs = 200
-Local_epoch = 1
-cuda = False
-# /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-
-# /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-manual_seed = random.randint(1, 10000)
-random.seed(manual_seed)
-torch.manual_seed(manual_seed)
-# /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-'''
-# /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-# DANN
-S_torch_loader = get_DANN_data(S_data, S_label, batch_size=10000, num_D=num_D, width=width)
-T_torch_loader = get_DANN_data(T_data, T_label, batch_size=10000, num_D=num_D, width=width)
-Kernel_size = 9
-Second_dim = int(((width - Kernel_size + 1) / 2 - Kernel_size + 1) / 2)
-DANN_train(S_torch_loader, T_torch_loader, cuda, lr, Epochs, num_class=Num_classes, kernel_size=Kernel_size, second_dim=Second_dim, model_root='models')
+global_epoch = 100
+local_epoch_common = 1
+local_epoch_RNN = 1
+local_epoch_temporal = 1
+time_lag_value = 3
 print()
+conv1_in_channels = num_D
+conv1_out_channels = 16
+conv2_out_channels = 32
+full_connect_num = 100
+kernel_size = 9
+In_features_size = conv2_out_channels * math.floor(
+    ((Num_Seconds * Sampling_frequency - kernel_size + 1) / 2 - kernel_size + 1) / 2)
+GRL_alpha = 0.1
+optim_Adam_weight_decay = 5e-4
+optim_Adam_beta = 0.5
+device = DEVICE
+file_name = 'M4_DDA_TRA_' + str(DATASET_NAME) + '_' + str(source_user) + '_' + str(target_user) + '_output.txt'
 # /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-'''
+for local_epoch_common in [10, 20, 30]:
+    for local_epoch_RNN in [10, 20, 30, 50, 100]:
+        for local_epoch_temporal in [5, 10, 20]:
+            for GRL_alpha in [0.2, 0.15, 0.25, 0.3, 0.1, 0.35]:
+                for full_connect_num in [100, 80, 50]:
+                    for lr in [1e-2, 1e-4, 1e-5, 1e-6]:
+                        for time_lag_value in [2, 3, 4, 5, 6, 7]:
+                            print('para_setting:' + str(local_epoch_common) + '_' + str(
+                                local_epoch_RNN) + '_' + str(local_epoch_temporal) + '_' + str(
+                                GRL_alpha) + '_' + str(full_connect_num) + '_' + str(
+                                lr) + '_' + str(time_lag_value))
+                            log_and_print(content='para_setting:' + str(local_epoch_common) + '_' + str(
+                                local_epoch_RNN) + '_' + str(local_epoch_temporal) + '_' + str(
+                                GRL_alpha) + '_' + str(full_connect_num) + '_' + str(
+                                lr) + '_' + str(time_lag_value), filename=file_name)
 
 # /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-# TrC model
-Epochs = 35
-S_torch_loader = get_TrC_Source_user_data(S_data, S_label, batch_size=10000, num_D=num_D, width=width)
-T_part_torch_loader, T_all_torch_loader = get_TrC_Target_user_data(T_data, T_label, batch_size=10000, num_D=num_D, width=width)
-Kernel_size = 9
-Second_dim = int(((width - Kernel_size + 1) / 2 - Kernel_size + 1) / 2)
-TrC_train(S_torch_loader, T_part_torch_loader, T_all_torch_loader, cuda, lr, Epochs, num_class=Num_classes, kernel_size=Kernel_size, second_dim=Second_dim, model_root='models')
-print()
-# /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+                            S_torch_loader, T_torch_loader, ST_torch_loader = get_DDA_TRA_data(S_data, S_label, T_data, T_label,
+                                                                                               batch_size=10000, num_D=num_D,
+                                                                                               width=width, device=device)
 
-
-'''
-# /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-# DGTSDA_temporal_diff model
-Num_temporal_states = 3
-Conv1_in_channels = num_D
-Conv1_out_channels = 16
-Conv2_out_channels = 32
-Kernel_size_num = 9
-In_features_size = Conv2_out_channels * math.floor(((Num_Seconds * Sampling_frequency-Kernel_size_num+1)/2 - Kernel_size_num + 1)/2)
-Bottleneck_dim = 100
-Dis_hidden = 50
-ReverseLayer_latent_domain_alpha = 0.1
-ReverseLayer_domain_invariant_alpha = 0.1
-Entropylogits_lambda = 0.0
-Lr_decay1 = 1.0
-Lr_decay2 = 1.0
-Optim_Adam_weight_decay = 5e-4
-Optim_Adam_beta = 0.5
-TICC_switch_penalty = 0.02
-# /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-file_name = 'M2_new_DTSDA_' + str(DATASET_NAME) + '_' + str(source_user) + '_' + str(target_user) + '_output.txt'
-file_name_summary = 'M2_new_DTSDA_' + str(DATASET_NAME) + '_' + str(source_user) + '_' + str(target_user) + '_output_summary.txt'
-
-for Bottleneck_dim in [100]: # 100, 50
-    for Dis_hidden in [50]: # 50, 20
-        for Lr_decay1 in [1.0]:  # 0.5 1.0
-            for Lr_decay2 in [1.0]:
-                for Optim_Adam_weight_decay in [5e-4]: # 5e-4, 5e-2
-                    for Optim_Adam_beta in [0.2, 0.5]:# 0.2, 0.5
-                        for lr in [1e-2, 1e-1, 1e-3]:
-                            for Num_temporal_states in [2, 3, 4, 5, 6, 7]: #2,3, 4, 5,6,
-                                for TICC_switch_penalty in [0, 0.0001, 0.001, 0.01, 0.1, 1]:# , 0, 0.0001, 0.001, 0.01, 0.1, 1
-                                    print('para_setting:' + str(Num_temporal_states) + '_' + str(
-                                        Bottleneck_dim) + '_' + str(Dis_hidden) + '_' + str(
-                                        Lr_decay1) + '_' + str(Lr_decay2) + '_' + str(
-                                        Optim_Adam_weight_decay) + '_' + str(Optim_Adam_beta) + '_' + str(lr) + '_' + str(
-                                        TICC_switch_penalty))
-                                    log_and_print(content='para_setting:' + str(Num_temporal_states) + '_' + str(
-                                        Bottleneck_dim) + '_' + str(Dis_hidden) + '_' + str(
-                                        Lr_decay1) + '_' + str(Lr_decay2) + '_' + str(
-                                        Optim_Adam_weight_decay) + '_' + str(Optim_Adam_beta) + '_' + str(lr) + '_' + str(
-                                        TICC_switch_penalty), filename=file_name)
-
-                                    S_torch_loader, T_torch_loader, ST_torch_loader = get_DGTSDA_temporal_diff_train_data(S_data, S_label, T_data, T_label,
-                                                                                                                          batch_size=10000, num_D=num_D,
-                                                                                                                          width=width,
-                                                                                                                          num_class=Num_classes)
-                                    target_acc, cm = DGTSDA_temporal_diff_train(S_torch_loader, T_torch_loader, ST_torch_loader, global_epoch=Epochs, local_epoch=Local_epoch,
-                                                               num_classes=Num_classes,
-                                                               num_temporal_states=Num_temporal_states,
-                                                               conv1_in_channels=Conv1_in_channels, conv1_out_channels=Conv1_out_channels,
-                                                               conv2_out_channels=Conv2_out_channels,
-                                                               kernel_size_num=Kernel_size_num,
-                                                               in_features_size=In_features_size, bottleneck_dim=Bottleneck_dim, dis_hidden=Dis_hidden,
-                                                               ReverseLayer_latent_domain_alpha=ReverseLayer_latent_domain_alpha,
-                                                               ReverseLayer_domain_invariant_alpha=ReverseLayer_domain_invariant_alpha,
-                                                               Entropylogits_lambda=Entropylogits_lambda,
-                                                               lr_decay1=Lr_decay1, lr_decay2=Lr_decay2, lr=lr,
-                                                               optim_Adam_weight_decay=Optim_Adam_weight_decay,
-                                                               optim_Adam_beta=Optim_Adam_beta,
-                                                               TICC_switch_penalty=TICC_switch_penalty, file_name=file_name)
-
-                                    print()
-                                    log_and_print(content='para_setting:' + str(Num_temporal_states) + '_' + str(
-                                        Bottleneck_dim) + '_' + str(Dis_hidden) + '_' + str(
-                                        Lr_decay1) + '_' + str(Lr_decay2) + '_' + str(
-                                        Optim_Adam_weight_decay) + '_' + str(Optim_Adam_beta) + '_' + str(lr) + '_' + str(
-                                        TICC_switch_penalty), filename=file_name_summary)
-                                    log_and_print(
-                                        content='best target acc:' + str(target_acc),
-                                        filename=file_name_summary)
-                                    log_and_print(
-                                        content='best cm:' + matrix_to_string(cm),
-                                        filename=file_name_summary)
-                                    log_and_print(
-                                        content='-------------------------------------------------',
-                                        filename=file_name_summary)
-# /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-'''""
+                            target_acc = DDA_TRA_train(S_torch_loader, T_torch_loader, ST_torch_loader, global_epoch, local_epoch_common,
+                                                       local_epoch_RNN,
+                                                       local_epoch_temporal, time_lag_value,
+                                                       conv1_in_channels, conv1_out_channels, conv2_out_channels,
+                                                       full_connect_num, Num_classes, kernel_size, In_features_size, GRL_alpha,
+                                                       lr_decay, lr, optim_Adam_weight_decay, optim_Adam_beta, file_name, device)
