@@ -95,8 +95,8 @@ optim_Adam_beta = 0.5
 device = DEVICE
 file_name = 'M4_DDA_TRA_' + str(DATASET_NAME) + '_' + str(source_user) + '_' + str(target_user) + '_output.txt'
 # /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-for local_epoch_common in [10, 20, 30]:
-    for local_epoch_RNN in [10, 20, 30, 50, 100]:
+for local_epoch_common in [5, 10, 20, 30]:
+    for local_epoch_RNN in [5, 10, 20, 30, 50, 100]:
         for local_epoch_temporal in [5, 10, 20]:
             for GRL_alpha in [0.2, 0.15, 0.25, 0.3, 0.1, 0.35]:
                 for full_connect_num in [100, 80, 50]:
