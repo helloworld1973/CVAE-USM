@@ -102,7 +102,7 @@ for local_epoch_common in [2, 5, 10]:
         for local_epoch_temporal in [2, 5, 10]:
             for GRL_alpha in [0.2, 0.1, 0.15, 0.25, 0.3, 0.35]:
                 for full_connect_num in [100, 80, 50]:
-                    for lr in [1e-2, 1e-4, 1e-5, 1e-6]:
+                    for lr in [1e-4, 1e-5, 1e-6]:
                         for time_lag_value in [2, 3, 4, 5, 6, 7]:
                             print('para_setting:' + str(local_epoch_common) + '_' + str(
                                 local_epoch_RNN) + '_' + str(local_epoch_temporal) + '_' + str(
