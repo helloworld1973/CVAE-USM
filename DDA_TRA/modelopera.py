@@ -12,10 +12,13 @@ def accuracy(network, loader, weights, usedpredict='p'):
         for data in loader:
             x = data[0].float()
             y = data[1].long()
+            y = y.cpu()
             if usedpredict == 'p':
                 p = network.predict(x)
+                p = p.cpu()
             else:
                 p = network.predict1(x)
+                p = p.cpu()
             if weights is None:
                 batch_weights = torch.ones(len(x))
             else:
