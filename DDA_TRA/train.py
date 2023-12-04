@@ -2,96 +2,77 @@ import sys
 import torch.optim as optim
 import torch.utils.data
 import numpy as np
+
+from DDA_TRA import modelopera
+from DDA_TRA.opt import get_optimizer
 from DDA_TRA.test import test
 from DDA_TRA.model import CNNRNNModel
 import os
 
+from DDA_TRA.util import set_random_seed, log_and_print, print_row
 
-def DANN_train(dataloader_source, dataloader_target, cuda, lr, n_epoch, num_class, kernel_size, second_dim, model_root):
-    # load model
-    my_net = CNNRNNModel(num_class=num_class, kernel_size=kernel_size, second_dim=second_dim)
-    # setup optimizer
-    optimizer = optim.Adam(my_net.parameters(), lr=lr)
 
-    loss_class = torch.nn.NLLLoss()
-    loss_domain = torch.nn.NLLLoss()
+def DDA_TRA_train(S_torch_loader, T_torch_loader, ST_torch_loader, global_epoch, local_epoch_common, local_epoch_RNN,
+                  local_epoch_temporal, time_lag_value,
+                  conv1_in_channels, conv1_out_channels, conv2_out_channels,
+                  full_connect_num, num_class, kernel_size, second_dim, GRL_alpha,
+                  lr_decay, lr, optim_Adam_weight_decay, optim_Adam_beta, file_name, device):
+    set_random_seed(1234)
 
-    if cuda:
-        my_net = my_net.cuda()
-        loss_class = loss_class.cuda()
-        loss_domain = loss_domain.cuda()
+    best_valid_acc, target_acc = 0, 0
 
-    for p in my_net.parameters():
-        p.requires_grad = True
+    algorithm = CNNRNNModel(conv1_in_channels, conv1_out_channels, conv2_out_channels,
+                            full_connect_num, num_class, kernel_size, second_dim)
+    algorithm = algorithm.to(device)
+    algorithm.train()
+    opt_rnn_S = get_optimizer(algorithm, lr_decay, lr, optim_Adam_weight_decay, optim_Adam_beta,
+                         nettype='DDA_TRA_rnn_S')
+    opt_rnn_T = get_optimizer(algorithm, lr_decay, lr, optim_Adam_weight_decay, optim_Adam_beta,
+                              nettype='DDA_TRA_rnn_T')
+    opt_rnn_Temporal_Relation = get_optimizer(algorithm, lr_decay, lr, optim_Adam_weight_decay, optim_Adam_beta,
+                              nettype='DDA_TRA_Temporal_Relation')
+    optc = get_optimizer(algorithm, lr_decay, lr, optim_Adam_weight_decay, optim_Adam_beta,
+                         nettype='DDA_TRA_common')
 
-    # training
-    best_accu_t = 0.0
-    for epoch in range(n_epoch):
+    for round in range(global_epoch):
+        print(f'\n========ROUND {round}========')
+        log_and_print(f'\n========ROUND {round}========', filename=file_name)
 
-        len_dataloader = min(len(dataloader_source), len(dataloader_target))
+        print('====DANN feature update====')
+        log_and_print('====DANN feature update====', filename=file_name)
+        loss_list = ['total', 'classes', 'domains']
+        print_row(['epoch'] + [item + '_loss' for item in loss_list], colwidth=15, file_name=file_name)
+        for step in range(local_epoch_common):
+            for data in ST_torch_loader:
+                for S_data in S_torch_loader:
+                    loss_result_dict = algorithm.forward_update_common_components(data, S_data, optc, GRL_alpha)
+            print_row([step] + [loss_result_dict[item] for item in loss_list], colwidth=15, file_name=file_name)
 
-        for i in range(len_dataloader):
+        print('====RNN network training====')
+        log_and_print('====RNN network training====', filename=file_name)
+        loss_list = ['S_sequence_loss', 'T_sequence_loss']
+        print_row(['epoch'] + [item + '_loss' for item in loss_list], colwidth=15, file_name=file_name)
+        for step in range(local_epoch_RNN):
+            for S_data in S_torch_loader:
+                for T_data in T_torch_loader:
+                    loss_result_dict = algorithm.forward_update_RNN_network(S_data, T_data, opt_rnn_S, opt_rnn_T, time_lags=time_lag_value)
+            print_row([step] + [loss_result_dict[item] for item in loss_list], colwidth=15, file_name=file_name)
 
-            p = float(i + epoch * len_dataloader) / n_epoch / len_dataloader
-            alpha = 2. / (1. + np.exp(-10 * p)) - 1
+        print('====Temporal relation alignment====')
+        log_and_print('====Temporal relation alignment====', filename=file_name)
+        loss_list = ['temporal_loss', 'S_using_Trnn_temporal_loss', 'T_using_Srnn_temporal_loss']
+        print_row(['epoch'] + [item + '_loss' for item in loss_list], colwidth=15, file_name=file_name)
+        for step in range(local_epoch_temporal):
+            for S_data in S_torch_loader:
+                for T_data in T_torch_loader:
+                    loss_result_dict = algorithm.forward_update_temporal_alignment(S_data, T_data, opt_rnn_Temporal_Relation,time_lag_value)
+            print_row([step] + [loss_result_dict[item] for item in loss_list], colwidth=15, file_name=file_name)
 
-            # training model using source data
-            for data_source in dataloader_source:
-                # data_source = data_source_iter
-                s_img, s_label = data_source
+        print('====Evaluation====')
+        log_and_print('====Evaluation====', filename=file_name)
+        S_acc = modelopera.accuracy(algorithm, S_torch_loader, None)
+        T_acc = modelopera.accuracy(algorithm, T_torch_loader, None)
+        log_and_print('====S_acc====' + str(S_acc), filename=file_name)
+        log_and_print('====T_acc====' + str(T_acc), filename=file_name)
 
-                my_net.zero_grad()
-                batch_size = len(s_label)
-
-                domain_label = torch.zeros(batch_size).long()
-
-                if cuda:
-                    s_img = s_img.cuda()
-                    s_label = s_label.cuda()
-                    domain_label = domain_label.cuda()
-
-                class_output, domain_output = my_net(input_data=s_img, alpha=alpha)
-                err_s_label = loss_class(class_output, s_label)
-                err_s_domain = loss_domain(domain_output, domain_label)
-
-                # training model using target data
-                for data_target in dataloader_target:
-                    t_img, _ = data_target
-
-                    batch_size = len(t_img)
-
-                    domain_label = torch.ones(batch_size).long()
-
-                    if cuda:
-                        t_img = t_img.cuda()
-                        domain_label = domain_label.cuda()
-
-                    _, domain_output = my_net(input_data=t_img, alpha=alpha)
-                    err_t_domain = loss_domain(domain_output, domain_label)
-                    err = err_t_domain + err_s_domain + err_s_label
-                    err.backward()
-                    optimizer.step()
-
-                    #sys.stdout.write(
-                    #    '\r epoch: %d, [iter: %d / all %d], err_s_label: %f, err_s_domain: %f, err_t_domain: %f' \
-                    #    % (epoch, i + 1, len_dataloader, err_s_label.data.cpu().numpy(),
-                    #       err_s_domain.data.cpu().numpy(), err_t_domain.data.cpu().item()))
-                    #sys.stdout.flush()
-                    if not os.path.exists(model_root):
-                        os.makedirs(model_root)
-                    torch.save(my_net, '{0}/model_epoch_current.pth'.format(model_root))
-
-        #print('\n')
-        accu_s = test(dataloader_source, cuda, model_root, alpha=alpha)
-        #print('Accuracy of the %s dataset: %f' % ('source', accu_s))
-        accu_t = test(dataloader_target, cuda, model_root, alpha=alpha)
-        #print('Accuracy of the %s dataset: %f\n' % ('target', accu_t))
-        if accu_t > best_accu_t:
-            best_accu_s = accu_s
-            best_accu_t = accu_t
-            torch.save(my_net, '{0}/model_epoch_best.pth'.format(model_root))
-
-    print('============ Summary ============= \n')
-    print('Accuracy of the %s dataset: %f' % ('source', best_accu_s))
-    print('Accuracy of the %s dataset: %f' % ('target', best_accu_t))
-    print('Corresponding model was save in ' + model_root + '/model_epoch_best.pth')
+    return T_acc

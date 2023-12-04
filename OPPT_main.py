@@ -1,10 +1,9 @@
 import torch
 import numpy as np
 from gtda.time_series import SlidingWindow
-import random
-from utils import get_DANN_data
-from DANN.train import DANN_train
-
+from DDA_TRA.train import DDA_TRA_train
+from utils import get_DDA_TRA_data
+import math
 # /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 # OPPT_dataset
 sensor_channels_required = ['IMU_RLA_ACC_X', 'IMU_RLA_ACC_Y', 'IMU_RLA_ACC_Z',
@@ -68,32 +67,39 @@ T_label = [int(x) for x in T_label]
 # /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 # model training paras settings
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+lr_decay = 1.0
 lr = 1e-2
 num_D = 6
 width = int(Sampling_frequency * Num_Seconds)
 Num_classes = 4
-Epochs = 200
-Local_epoch = 1
+global_epoch = 100
+local_epoch_common = 1
+local_epoch_RNN = 1
+local_epoch_temporal = 1
+time_lag_value = 3
 cuda = False
 print()
+conv1_in_channels = num_D
+conv1_out_channels = 16
+conv2_out_channels = 32
+full_connect_num = 100
+kernel_size = 9
+In_features_size = conv2_out_channels * math.floor(((Num_Seconds * Sampling_frequency-kernel_size+1)/2 - kernel_size + 1)/2)
+GRL_alpha = 0.1
+optim_Adam_weight_decay = 5e-4
+optim_Adam_beta = 0.5
+device = DEVICE
+file_name = 'M4_DDA_TRA_' + str(DATASET_NAME) + '_' + str(source_user) + '_' + str(target_user) + '_output.txt'
+
 # /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+S_torch_loader, T_torch_loader, ST_torch_loader = get_DDA_TRA_data(S_data, S_label, T_data, T_label,
+                                                                   batch_size=10000, num_D=num_D,
+                                                                   width=width,
+                                                                   num_class=Num_classes)
 
-# /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-manual_seed = random.randint(1, 10000)
-random.seed(manual_seed)
-torch.manual_seed(manual_seed)
-# /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-
-
-# /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-# DANN model
-S_torch_loader = get_DANN_data(S_data, S_label, batch_size=10000, num_D=num_D, width=width)
-T_torch_loader = get_DANN_data(T_data, T_label, batch_size=10000, num_D=num_D, width=width)
-Kernel_size = 9
-Second_dim = int(((width - Kernel_size + 1) / 2 - Kernel_size + 1) / 2)
-DANN_train(S_torch_loader, T_torch_loader, cuda, lr, Epochs, num_class=Num_classes, kernel_size=Kernel_size, second_dim=Second_dim, model_root='models')
-print()
-# /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
+target_acc = DDA_TRA_train(S_torch_loader, T_torch_loader, ST_torch_loader, global_epoch, local_epoch_common, local_epoch_RNN,
+                           local_epoch_temporal, time_lag_value,
+                           conv1_in_channels, conv1_out_channels, conv2_out_channels,
+                           full_connect_num, Num_classes, kernel_size, In_features_size, GRL_alpha,
+                           lr_decay, lr, optim_Adam_weight_decay, optim_Adam_beta, file_name, device)
