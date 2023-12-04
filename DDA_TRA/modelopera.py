@@ -46,7 +46,7 @@ def accuracy_cm(network, t_loader, weights, usedpredict='p'):
     t_length = len(t_loader.dataset.tensors[1])
 
     # Get all unique classes from the target loader
-    all_labels = torch.cat([t_data[1] for t_data in t_loader])
+    all_labels = torch.cat([t_data[1].cpu() for t_data in t_loader])
     class_unique_elements = torch.unique(all_labels).numpy()
     num_classes = len(class_unique_elements)
 
@@ -90,6 +90,7 @@ def accuracy_cm(network, t_loader, weights, usedpredict='p'):
 
     # Calculate the accuracy
     accuracy = correct / t_length
+    network.train()
 
     return accuracy, confusion_matrix
 
