@@ -19,7 +19,7 @@ def DDA_TRA_train(S_torch_loader, T_torch_loader, ST_torch_loader, global_epoch,
                   lr_decay, lr, optim_Adam_weight_decay, optim_Adam_beta, file_name, device):
     set_random_seed(1234)
 
-    best_target_cm, best_target_acc = 0, 0
+    best_target_cm, best_target_acc, corresponding_best_source_acc = 0, 0, 0
 
     algorithm = CNNRNNModel(conv1_in_channels, conv1_out_channels, conv2_out_channels,
                             full_connect_num, num_class, kernel_size, second_dim)
@@ -81,5 +81,6 @@ def DDA_TRA_train(S_torch_loader, T_torch_loader, ST_torch_loader, global_epoch,
         if T_acc > best_target_acc:
             best_target_acc = T_acc
             best_target_cm = T_cm
+            corresponding_best_source_acc = S_acc
 
-    return best_target_acc, best_target_cm
+    return best_target_acc, best_target_cm, corresponding_best_source_acc

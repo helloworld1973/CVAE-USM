@@ -99,8 +99,8 @@ for local_epoch_common in [2, 5, 10]:
         for local_epoch_temporal in [2, 5, 10]:
             for GRL_alpha in [0.2, 0.15, 0.25, 0.3, 0.1, 0.35]:
                 for full_connect_num in [100, 80, 50]:
-                    for lr in [1e-4, 1e-5, 1e-6]:
-                        for time_lag_value in [2, 3, 4, 5, 6, 7]:
+                    for lr in [1e-1, 5e-2, 1e-2, 5e-3, 1e-3, 5e-4, 1e-4]:
+                        for time_lag_value in [3, 6, 9, 12]:
                             print('para_setting:' + str(local_epoch_common) + '_' + str(
                                 local_epoch_RNN) + '_' + str(local_epoch_temporal) + '_' + str(
                                 GRL_alpha) + '_' + str(full_connect_num) + '_' + str(
@@ -121,7 +121,7 @@ for local_epoch_common in [2, 5, 10]:
                                                        conv1_in_channels, conv1_out_channels, conv2_out_channels,
                                                        full_connect_num, Num_classes, kernel_size, In_features_size, GRL_alpha,
                                                        lr_decay, lr, optim_Adam_weight_decay, optim_Adam_beta, file_name, device)
-                            best_target_acc, best_target_cm = DDA_TRA_train(S_torch_loader, T_torch_loader,
+                            best_target_acc, best_target_cm, corresponding_best_source_acc = DDA_TRA_train(S_torch_loader, T_torch_loader,
                                                                             ST_torch_loader, global_epoch,
                                                                             local_epoch_common,
                                                                             local_epoch_RNN,
@@ -140,6 +140,9 @@ for local_epoch_common in [2, 5, 10]:
                                     lr) + '_' + str(time_lag_value), filename=file_name_summary)
                             log_and_print(
                                 content='best target acc:' + str(best_target_acc),
+                                filename=file_name_summary)
+                            log_and_print(
+                                content='corresponding best source acc:' + str(corresponding_best_source_acc),
                                 filename=file_name_summary)
                             log_and_print(
                                 content='best cm:',
