@@ -7,7 +7,7 @@ from IJCAI_CVAE_USM.utils.util import set_random_seed, log_and_print, print_row
 
 def GPU_CVAE_USM_train(S_torch_loader, T_torch_loader, ST_torch_loader, global_epoch,
                        local_epoch, num_classes,
-                       num_temporal_states,
+                       num_sub_act, num_temporal_states,
                        conv1_in_channels, conv1_out_channels, conv2_out_channels,
                        kernel_size_num, in_features_size, hidden_size, dis_hidden,
                        ReverseLayer_latent_domain_alpha, variance, alpha, beta, gamma, delta,
@@ -21,7 +21,7 @@ def GPU_CVAE_USM_train(S_torch_loader, T_torch_loader, ST_torch_loader, global_e
 
     algorithm = CVAE_USM(conv1_in_channels, conv1_out_channels, conv2_out_channels, kernel_size_num,
                          in_features_size,
-                         hidden_size, dis_hidden, num_classes, num_temporal_states,
+                         hidden_size, dis_hidden, num_classes, num_sub_act, num_temporal_states,
                          ReverseLayer_latent_domain_alpha, variance,
                          alpha, beta, gamma, delta, epsilon)
     algorithm = algorithm.to(device)
@@ -49,7 +49,7 @@ def GPU_CVAE_USM_train(S_torch_loader, T_torch_loader, ST_torch_loader, global_e
             for ST_data in ST_torch_loader:
                 for S_data in S_torch_loader:
                     for T_data in T_torch_loader:
-                        step_vals, temporal_state_labels_S, temporal_state_labels_T = algorithm.update(ST_data, S_data, T_data, opt, device)
+                        step_vals, temporal_state_labels_S, temporal_state_labels_T = algorithm.update_GMM_clustering(ST_data, S_data, T_data, opt, device)
 
             algorithm.GPU_set_tlabel(S_torch_loader, T_torch_loader, temporal_state_labels_S, temporal_state_labels_T, device)
             results = {'epoch': step, }
