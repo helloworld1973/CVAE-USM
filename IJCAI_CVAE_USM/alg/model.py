@@ -13,6 +13,7 @@ import ot
 from sklearn.manifold import TSNE
 import matplotlib.pyplot as plt
 
+
 class CVAE_USM(nn.Module):
     def __init__(self, conv1_in_channels, conv1_out_channels, conv2_out_channels, kernel_size_num, in_features_size,
                  hidden_size, dis_hidden, num_class, num_temporal_states, reverseLayer_latent_domain_alpha, variance,
@@ -49,7 +50,7 @@ class CVAE_USM(nn.Module):
         self.domains = Discriminator(self.hidden_size, self.dis_hidden, 2)
         # self.temporal_states = linear_classifier(self.hidden_size, self.num_temporal_states)
 
-    def update(self, ST_data, S_data, T_data, opt):
+    def update(self, ST_data, S_data, T_data, opt, device):
         all_x = ST_data[0].float()
         all_c = ST_data[1].long()
         all_ts = ST_data[2].long()
@@ -67,7 +68,8 @@ class CVAE_USM(nn.Module):
         predict_all_temporal_state_labels = all_z  # self.temporal_states(all_z)
         # predict_all_temporal_state_labels = F.softmax(predict_all_temporal_state_labels)
         # predict_all_temporal_state_labels = torch.argmax(predict_all_temporal_state_labels, dim=1)
-        TEMPORAL_L = self.USM_temporal_extraction(predict_all_temporal_state_labels, ST_data, S_data, T_data)
+        TEMPORAL_L, temporal_state_labels_S, temporal_state_labels_T = self.USM_temporal_extraction(
+            predict_all_temporal_state_labels, ST_data, S_data, T_data, device)
 
         # domains (users) update
         disc_d_in1 = ReverseLayerF.apply(all_z, self.ReverseLayer_latent_domain_alpha)
@@ -90,9 +92,9 @@ class CVAE_USM(nn.Module):
         loss.backward()
         opt.step()
         return {'total': loss.item(), 'reconstruct': RECON_L.item(), 'KL': KLD_L.item(),
-                'source_classes': S_CLASS_L.item(), 'disc_domains': disc_DOMAIN_L.item(), 'temporal': TEMPORAL_L.item()}
+                'source_classes': S_CLASS_L.item(), 'disc_domains': disc_DOMAIN_L.item(), 'temporal': TEMPORAL_L.item()}, temporal_state_labels_S, temporal_state_labels_T
 
-    def USM_temporal_extraction(self, predict_all_temporal_state_labels, ST_data, S_data, T_data):
+    def USM_temporal_extraction(self, predict_all_temporal_state_labels, ST_data, S_data, T_data, device):
         # generate USM features for each activity and each user
         # predict_all_temporal_state_labels_list = predict_all_temporal_state_labels.tolist()
         predict_all_temporal_state_numpy_data = predict_all_temporal_state_labels.detach().numpy()
@@ -171,23 +173,37 @@ class CVAE_USM(nn.Module):
         # Get the cluster centers
         centers_S = kmeans_after_USM_S.cluster_centers_
         centers_T = kmeans_after_USM_T.cluster_centers_
-        # Compute the Wasserstein distance for each pair of cluster centers
-        # Compute the cost matrix (Euclidean distance between each pair of centers)
         M = ot.dist(centers_S, centers_T, metric='euclidean')
-
-        # Assuming uniform distribution of mass across cluster centers
-        # Adjust this if you have information about the number of points in each cluster
         a = ot.unif(centers_S.shape[0])
         b = ot.unif(centers_T.shape[0])
-
-        # Compute Wasserstein distance
         wasserstein_distance = ot.emd2(a, b, M)
-
         wasserstein_dist_tensor = torch.tensor(wasserstein_distance, dtype=torch.float32)
-        return wasserstein_dist_tensor
 
+        # update
+        temporal_state_labels_S = kmeans_after_USM_S.labels_
+        temporal_state_labels_T = kmeans_after_USM_T.labels_
 
+        return wasserstein_dist_tensor, temporal_state_labels_S, temporal_state_labels_T
 
     def predict(self, x):
         mu, _ = self.CVAE_encoder(self.featurizer(x))
         return self.classify_source(mu), mu
+
+    def GPU_set_tlabel(self, S_torch_loader, T_torch_loader, temporal_state_labels_S, temporal_state_labels_T, device):
+        self.CVAE_encoder.eval()
+        self.CVAE_reparameterize.eval()
+        self.featurizer.eval()
+
+        S_torch_loader.dataset.tensors = (
+            S_torch_loader.dataset.tensors[0].to(device), S_torch_loader.dataset.tensors[1].to(device),
+            torch.tensor(temporal_state_labels_S).to(device),
+            S_torch_loader.dataset.tensors[3].to(device), S_torch_loader.dataset.tensors[4].to(device))
+
+        T_torch_loader.dataset.tensors = (
+            T_torch_loader.dataset.tensors[0].to(device), T_torch_loader.dataset.tensors[1].to(device),
+            torch.tensor(temporal_state_labels_T).to(device),
+            T_torch_loader.dataset.tensors[3].to(device), T_torch_loader.dataset.tensors[4].to(device))
+
+        self.CVAE_encoder.train()
+        self.CVAE_reparameterize.train()
+        self.featurizer.train()

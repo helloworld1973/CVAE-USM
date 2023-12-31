@@ -44,11 +44,14 @@ def GPU_CVAE_USM_train(S_torch_loader, T_torch_loader, ST_torch_loader, global_e
 
         sss = time.time()
         for step in range(local_epoch):
+            temporal_state_labels_S = 0
+            temporal_state_labels_T = 0
             for ST_data in ST_torch_loader:
                 for S_data in S_torch_loader:
                     for T_data in T_torch_loader:
-                        step_vals = algorithm.update(ST_data, S_data, T_data, opt)
+                        step_vals, temporal_state_labels_S, temporal_state_labels_T = algorithm.update(ST_data, S_data, T_data, opt, device)
 
+            algorithm.GPU_set_tlabel(S_torch_loader, T_torch_loader, temporal_state_labels_S, temporal_state_labels_T, device)
             results = {'epoch': step, }
 
             results['train_acc'] = modelopera.GPU_accuracy(
