@@ -73,8 +73,8 @@ T_label = [int(x) for x in T_label]
 num_D = 6
 width = Sampling_frequency * Num_Seconds
 Num_classes = 11
-Epochs = 100
-Local_epoch = 10
+Epochs = 200
+Local_epoch = 1
 device = torch.device("cpu")  # "cuda:2"
 # /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -95,16 +95,15 @@ Kernel_size_num = 9
 In_features_size = Conv2_out_channels * math.floor(
     ((Num_Seconds * Sampling_frequency - Kernel_size_num + 1) / 2 - Kernel_size_num + 1) / 2)
 
-Lr_decay1 = 1.0
-Lr_decay2 = 1.0
+Lr_decay = 1.0
 Optim_Adam_weight_decay = 5e-4
 Optim_Adam_beta = 0.5
 
-Alpha = 1.0  # RECON_L
+Alpha = 5.0  # RECON_L
 Beta = 10.0  # KLD_L
-Delta = 1.0  # DOMAIN_L
+Delta = 5.0  # DOMAIN_L
 Gamma = 30.0  # CLASS_L
-Epsilon = 10.0  # TEMPORAL_L
+Epsilon = 20.0  # TEMPORAL_L
 # /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 file_name = str(DATASET_NAME) + '_' + str(source_user) + '_' + str(target_user) + '_CVAE_USM.txt'
 file_name_summary = str(DATASET_NAME) + '_' + str(source_user) + '_' + str(target_user) + '_CVAE_USM_summary.txt'
@@ -115,19 +114,19 @@ for Lr_decay in [1.0, 0.8, 0.5]:  # 1.0, 0.8, 0.5
             for Hidden_size in [100, 80, 50]:  # 100, 80, 50
                 for Dis_hidden in [50, 30, 20]:  # 50, 30, 20
                     for ReverseLayer_latent_domain_alpha in [0.2, 0.15, 0.25, 0.3, 0.1, 0.35]:  # 0.2, 0.15, 0.25, 0.3, 0.1, 0.35
-                        for lr in [1e-4, 1e-3, 1e-5, 1e-6]:  # 1e-2, 1e-1, 1e-3,1e-4, 1e-5, 1e-6
+                        for lr in [1e-3, 1e-4, 1e-5, 1e-6]:  # 1e-2, 1e-1, 1e-3,1e-4, 1e-5, 1e-6
                             for Variance in [1, 2, 0.7, 3, 0.4, 4, 5]:  # 1, 2, 0.7, 3, 0.4, 4, 5
                                 for Num_temporal_states in [15, 20, 25, 30, 35, 40, 45, 50]:  # 2, 3, 4, 5, 6, 7
                                     print('para_setting:' + str(Num_temporal_states) + '_' + str(
                                         Hidden_size) + '_' + str(Dis_hidden) + '_' + str(
-                                        Lr_decay1) + '_' + str(Lr_decay2) + '_' + str(
+                                        Lr_decay) + '_' + str(
                                         Optim_Adam_weight_decay) + '_' + str(Optim_Adam_beta) + '_' + str(
                                         Variance) + '_' + str(lr) + '_' + str(
                                         ReverseLayer_latent_domain_alpha))
                                     log_and_print(
                                         content='para_setting:' + str(Num_temporal_states) + '_' + str(
                                             Hidden_size) + '_' + str(Dis_hidden) + '_' + str(
-                                            Lr_decay1) + '_' + str(Lr_decay2) + '_' + str(
+                                            Lr_decay) + '_' + str(
                                             Optim_Adam_weight_decay) + '_' + str(Optim_Adam_beta) + '_' + str(
                                             Variance) + '_' + str(lr) + '_' + str(
                                             ReverseLayer_latent_domain_alpha), filename=file_name)
@@ -178,7 +177,7 @@ for Lr_decay in [1.0, 0.8, 0.5]:  # 1.0, 0.8, 0.5
                                     log_and_print(
                                         content='para_setting:' + str(Num_temporal_states) + '_' + str(
                                             Hidden_size) + '_' + str(Dis_hidden) + '_' + str(
-                                            Lr_decay1) + '_' + str(Lr_decay2) + '_' + str(
+                                            Lr_decay) + '_' + str(
                                             Optim_Adam_weight_decay) + '_' + str(Optim_Adam_beta) + '_' + str(Variance) + '_' + str(lr) + '_' + str(
                                             ReverseLayer_latent_domain_alpha), filename=file_name_summary)
                                     log_and_print(
