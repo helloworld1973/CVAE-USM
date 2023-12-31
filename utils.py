@@ -44,3 +44,5 @@ def get_DDA_TRA_data(S_x, S_y, T_x, T_y, batch_size, num_D, width, device):
     S_torch_loader = Data.DataLoader(dataset=S_torch_dataset, batch_size=batch_size, shuffle=False)
 
     return S_torch_loader, T_torch_loader, ST_torch_loader
+
+
