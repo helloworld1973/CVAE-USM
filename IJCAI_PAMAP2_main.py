@@ -75,7 +75,7 @@ width = Sampling_frequency * Num_Seconds
 Num_classes = 11
 Epochs = 200
 Local_epoch = 1
-device = torch.device("cpu")  # "cuda:2"
+device = torch.device("cuda:2")  # "cuda:2"
 # /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 
@@ -114,9 +114,9 @@ for Lr_decay in [1.0, 0.8, 0.5]:  # 1.0, 0.8, 0.5
             for Hidden_size in [100, 80, 50]:  # 100, 80, 50
                 for Dis_hidden in [50, 30, 20]:  # 50, 30, 20
                     for ReverseLayer_latent_domain_alpha in [0.2, 0.15, 0.25, 0.3, 0.1, 0.35]:  # 0.2, 0.15, 0.25, 0.3, 0.1, 0.35
-                        for lr in [1e-3, 1e-4, 1e-5, 1e-6]:  # 1e-2, 1e-1, 1e-3,1e-4, 1e-5, 1e-6
+                        for lr in [5*1e-4, 1e-5, 1e-6]:  # 1e-2, 1e-1, 1e-3,1e-4, 1e-5, 1e-6
                             for Variance in [1, 2, 0.7, 3, 0.4, 4, 5]:  # 1, 2, 0.7, 3, 0.4, 4, 5
-                                for Num_temporal_states in [15, 20, 25, 30, 35, 40, 45, 50]:  # 2, 3, 4, 5, 6, 7
+                                for Num_temporal_states in [5, 10, 15, 20, 25, 30, 35, 40, 45, 50]:  # 2, 3, 4, 5, 6, 7
                                     print('para_setting:' + str(Num_temporal_states) + '_' + str(
                                         Hidden_size) + '_' + str(Dis_hidden) + '_' + str(
                                         Lr_decay) + '_' + str(

@@ -97,7 +97,7 @@ class CVAE_USM(nn.Module):
     def USM_temporal_extraction(self, predict_all_temporal_state_labels, ST_data, S_data, T_data, device):
         # generate USM features for each activity and each user
         # predict_all_temporal_state_labels_list = predict_all_temporal_state_labels.tolist()
-        predict_all_temporal_state_numpy_data = predict_all_temporal_state_labels.detach().numpy()
+        predict_all_temporal_state_numpy_data = predict_all_temporal_state_labels.cpu().detach().numpy()
         # Apply K-Means clustering
         kmeans = KMeans(n_clusters=self.num_temporal_states, random_state=0)
         kmeans.fit(predict_all_temporal_state_numpy_data)
