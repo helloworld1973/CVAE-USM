@@ -5,7 +5,7 @@ import random
 from IJCAI_CVAE_USM.train import GPU_CVAE_USM_train
 import math
 
-from IJCAI_CVAE_USM.utils.util import log_and_print, GPU_get_CVAE_USM_train_data
+from IJCAI_CVAE_USM.utils.util import log_and_print, GPU_get_CVAE_USM_train_data, matrix_to_string
 
 # /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 # PAMAP2_dataset
@@ -75,7 +75,7 @@ width = Sampling_frequency * Num_Seconds
 Num_classes = 11
 Epochs = 400
 Local_epoch = 1
-device = torch.device("cuda:0")  # "cuda:2"
+device = torch.device("cpu")  # "cuda:2"
 # /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 
@@ -99,46 +99,46 @@ Lr_decay = 1.0
 Optim_Adam_weight_decay = 5e-4
 Optim_Adam_beta = 0.5
 
-Alpha = 5.0  # RECON_L
-Beta = 10.0  # KLD_L
-Delta = 5.0  # DOMAIN_L
-Gamma = 60.0  # CLASS_L # 30
-Epsilon = 60.0  # TEMPORAL_L
+Alpha = 2  # RECON_L 2
+Beta = 1 # KLD_L 0.5
+Delta = 5 # DOMAIN_L 1
+Gamma = 5 # CLASS_L 1
+Epsilon = 10.0  # TEMPORAL_L 10
 # /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-file_name = str(DATASET_NAME) + '_' + str(source_user) + '_' + str(target_user) + '_CVAE_USM_CT60_GMM.txt'
-file_name_summary = str(DATASET_NAME) + '_' + str(source_user) + '_' + str(target_user) + '_CVAE_USM_CT60_GMM_summary.txt'
+file_name = str(DATASET_NAME) + '_' + str(source_user) + '_' + str(target_user) + '_CVAE_USM.txt'
+file_name_summary = str(DATASET_NAME) + '_' + str(source_user) + '_' + str(
+    target_user) + '_CVAE_USM_summary.txt'
 
 for Lr_decay in [1.0]:  # 1.0, 0.8, 0.5
     for Optim_Adam_weight_decay in [5e-4]:  # 5e-4, 5e-3, 5e-2, 5e-1
-        for Optim_Adam_beta in [0.2]:  # 0.2, 0.5, 0.9
+        for Optim_Adam_beta in [0.9]:  # 0.2, 0.5, 0.9
             for Hidden_size in [100, 80, 50]:  # 100, 80, 50
                 for Dis_hidden in [50, 30, 20]:  # 50, 30, 20
-                    for ReverseLayer_latent_domain_alpha in [0.05, 0.1, 0.15, 0.2, 0.25, 0.3]:  # 0.2, 0.15, 0.25, 0.3, 0.1, 0.35
-                        for lr in [5*1e-4, 1e-4, 5*1e-5, 1e-5]:  # 1e-2, 1e-1, 1e-3,1e-4, 1e-5, 1e-6
+                    for ReverseLayer_latent_domain_alpha in [0.05, 0.1, 0.15, 0.2, 0.25,
+                                                             0.3]:  # 0.2, 0.15, 0.25, 0.3, 0.1, 0.35
+                        for lr in [5 * 1e-4, 1e-4, 5 * 1e-5, 1e-5]:  # 1e-2, 1e-1, 1e-3,1e-4, 1e-5, 1e-6
                             for Variance in [1, 2, 0.7, 3, 0.4, 4, 5]:  # 1, 2, 0.7, 3, 0.4, 4, 5
-                                for num_sub_act in [5, 10, 15, 20, 25, 30, 35]:
-                                    for Num_temporal_states in [num_sub_act, math.floor(num_sub_act*1.2), math.floor(num_sub_act*1.5), math.floor(num_sub_act*1.7), math.floor(num_sub_act*2)]:  # 2, 3, 4, 5, 6, 7
-                                        print('para_setting:' + str(num_sub_act) + '_' + str(Num_temporal_states) + '_' + str(
+                                for num_sub_act in [11, 15, 20, 25]:  # 5, 10, 15, 20, 25, 30, 35
+                                    for Num_temporal_states in [math.floor(num_sub_act * 0.4),
+                                                                math.floor(num_sub_act * 0.7),
+                                                                num_sub_act,
+                                                                math.floor(num_sub_act * 1.2),
+                                                                math.floor(num_sub_act * 1.5)]:  # 2, 3, 4, 5, 6, 7
+                                        print('para_setting:' + str(num_sub_act) + '_' + str(
+                                            Num_temporal_states) + '_' + str(
                                             Hidden_size) + '_' + str(Dis_hidden) + '_' + str(
                                             Lr_decay) + '_' + str(
                                             Optim_Adam_weight_decay) + '_' + str(Optim_Adam_beta) + '_' + str(
                                             Variance) + '_' + str(lr) + '_' + str(
                                             ReverseLayer_latent_domain_alpha))
                                         log_and_print(
-                                            content='para_setting:' + str(num_sub_act) + '_' + str(Num_temporal_states) + '_' + str(
+                                            content='para_setting:' + str(num_sub_act) + '_' + str(
+                                                Num_temporal_states) + '_' + str(
                                                 Hidden_size) + '_' + str(Dis_hidden) + '_' + str(
                                                 Lr_decay) + '_' + str(
                                                 Optim_Adam_weight_decay) + '_' + str(Optim_Adam_beta) + '_' + str(
                                                 Variance) + '_' + str(lr) + '_' + str(
                                                 ReverseLayer_latent_domain_alpha), filename=file_name)
-
-                                        '''
-                                                S_torch_loader, T_torch_loader, ST_torch_loader = get_temporal_diff_train_data(
-                                                    S_data, S_label, T_data, T_label,
-                                                    batch_size=10000, num_D=num_D,
-                                                    width=width,
-                                                    num_class=Num_classes)
-                                                '''
 
                                         S_torch_loader, T_torch_loader, ST_torch_loader = GPU_get_CVAE_USM_train_data(
                                             S_data, S_label, T_data, T_label,
@@ -146,44 +146,60 @@ for Lr_decay in [1.0]:  # 1.0, 0.8, 0.5
                                             width=width,
                                             num_class=Num_classes, device=device)
 
-                                        target_acc = GPU_CVAE_USM_train(S_torch_loader,
-                                                                        T_torch_loader,
-                                                                        ST_torch_loader,
-                                                                        global_epoch=Epochs,
-                                                                        local_epoch=Local_epoch,
-                                                                        num_classes=Num_classes,
-                                                                        num_sub_act=num_sub_act,
-                                                                        num_temporal_states=Num_temporal_states,
-                                                                        conv1_in_channels=Conv1_in_channels,
-                                                                        conv1_out_channels=Conv1_out_channels,
-                                                                        conv2_out_channels=Conv2_out_channels,
-                                                                        kernel_size_num=Kernel_size_num,
-                                                                        in_features_size=In_features_size,
-                                                                        hidden_size=Hidden_size,
-                                                                        dis_hidden=Dis_hidden,
-                                                                        ReverseLayer_latent_domain_alpha=ReverseLayer_latent_domain_alpha,
-                                                                        variance=Variance,
-                                                                        alpha=Alpha,
-                                                                        beta=Beta,
-                                                                        gamma=Gamma,
-                                                                        delta=Delta,
-                                                                        epsilon=Epsilon,
-                                                                        lr_decay=Lr_decay,
-                                                                        lr=lr,
-                                                                        optim_Adam_weight_decay=Optim_Adam_weight_decay,
-                                                                        optim_Adam_beta=Optim_Adam_beta,
-                                                                        file_name=file_name,
-                                                                        device=device)
+                                        best_target_acc, best_target_cm, corresponding_best_source_acc, best_epoch = GPU_CVAE_USM_train(
+                                            S_torch_loader,
+                                            T_torch_loader,
+                                            ST_torch_loader,
+                                            global_epoch=Epochs,
+                                            local_epoch=Local_epoch,
+                                            num_classes=Num_classes,
+                                            num_sub_act=num_sub_act,
+                                            num_temporal_states=Num_temporal_states,
+                                            conv1_in_channels=Conv1_in_channels,
+                                            conv1_out_channels=Conv1_out_channels,
+                                            conv2_out_channels=Conv2_out_channels,
+                                            kernel_size_num=Kernel_size_num,
+                                            in_features_size=In_features_size,
+                                            hidden_size=Hidden_size,
+                                            dis_hidden=Dis_hidden,
+                                            ReverseLayer_latent_domain_alpha=ReverseLayer_latent_domain_alpha,
+                                            variance=Variance,
+                                            alpha=Alpha,
+                                            beta=Beta,
+                                            gamma=Gamma,
+                                            delta=Delta,
+                                            epsilon=Epsilon,
+                                            lr_decay=Lr_decay,
+                                            lr=lr,
+                                            optim_Adam_weight_decay=Optim_Adam_weight_decay,
+                                            optim_Adam_beta=Optim_Adam_beta,
+                                            file_name=file_name,
+                                            device=device)
 
                                         print()
                                         log_and_print(
-                                            content='para_setting:' + str(num_sub_act) + '_' + str(Num_temporal_states) + '_' + str(
+                                            content='para_setting:' + str(num_sub_act) + '_' + str(
+                                                Num_temporal_states) + '_' + str(
                                                 Hidden_size) + '_' + str(Dis_hidden) + '_' + str(
                                                 Lr_decay) + '_' + str(
-                                                Optim_Adam_weight_decay) + '_' + str(Optim_Adam_beta) + '_' + str(Variance) + '_' + str(lr) + '_' + str(
+                                                Optim_Adam_weight_decay) + '_' + str(Optim_Adam_beta) + '_' + str(
+                                                Variance) + '_' + str(lr) + '_' + str(
                                                 ReverseLayer_latent_domain_alpha), filename=file_name_summary)
                                         log_and_print(
-                                            content='best target acc:' + str(target_acc),
+                                            content='best target acc:' + str(best_target_acc),
+                                            filename=file_name_summary)
+                                        log_and_print(
+                                            content='corresponding best source acc:' + str(
+                                                corresponding_best_source_acc),
+                                            filename=file_name_summary)
+                                        log_and_print(
+                                            content='best cm:',
+                                            filename=file_name_summary)
+                                        log_and_print(
+                                            content=matrix_to_string(best_target_cm),
+                                            filename=file_name_summary)
+                                        log_and_print(
+                                            content='best epoch:' + str(best_epoch),
                                             filename=file_name_summary)
                                         log_and_print(
                                             content='-------------------------------------------------',
