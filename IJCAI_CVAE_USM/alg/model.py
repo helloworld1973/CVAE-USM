@@ -210,7 +210,7 @@ class CVAE_USM(nn.Module):
         self.CVAE_reparameterize.train()
         self.featurizer.train()
 
-    def USM_temporal_extraction_GMM_clustering(self, predict_all_temporal_state_labels, S_data, T_data):
+    def USM_temporal_extraction_GMM_clustering(self, predict_all_temporal_state_labels, S_data, T_data, epoch):
         # generate USM features for each activity and each user
         # predict_all_temporal_state_labels_list = predict_all_temporal_state_labels.tolist()
         predict_all_temporal_state_numpy_data = predict_all_temporal_state_labels.cpu().detach().numpy()
@@ -275,12 +275,13 @@ class CVAE_USM(nn.Module):
         temporal_state_labels_S = gmm_after_USM_S.predict(s_USM)
         temporal_state_labels_T = gmm_after_USM_T.predict(t_USM)
 
-        #colors = self.draw_tsne(s_USM, temporal_state_labels_S, "Source", None)
-        #self.draw_tsne(t_USM, temporal_state_labels_T, "Target", colors)
+
+        colors = self.draw_tsne(s_USM, S_labels, "Source", None, epoch)
+        self.draw_tsne(t_USM, T_labels, "Target", colors, epoch)
 
         return wasserstein_dist_tensor, temporal_state_labels_S, temporal_state_labels_T
 
-    def update_GMM_clustering(self, ST_data, S_data, T_data, opt, device):
+    def update_GMM_clustering(self, ST_data, S_data, T_data, opt, epoch):
         all_x = ST_data[0].float()
         all_c = ST_data[1].long()
         all_ts = ST_data[2].long()
@@ -299,7 +300,7 @@ class CVAE_USM(nn.Module):
         # predict_all_temporal_state_labels = F.softmax(predict_all_temporal_state_labels)
         # predict_all_temporal_state_labels = torch.argmax(predict_all_temporal_state_labels, dim=1)
         TEMPORAL_L, temporal_state_labels_S, temporal_state_labels_T = self.USM_temporal_extraction_GMM_clustering(
-            predict_all_temporal_state_labels, S_data, T_data)
+            predict_all_temporal_state_labels, S_data, T_data, epoch)
 
         # domains (users) update
         disc_d_in1 = ReverseLayerF.apply(all_z, self.ReverseLayer_latent_domain_alpha)
@@ -331,7 +332,7 @@ class CVAE_USM(nn.Module):
         return {'total': loss.item(), 'reconstruct': RECON_L.item(), 'KL': KLD_L.item(),
                 'source_classes': S_CLASS_L.item(), 'disc_domains': disc_DOMAIN_L.item(), 'temporal': TEMPORAL_L.item()}, temporal_state_labels_S, temporal_state_labels_T
 
-    def draw_tsne(self, a_USM, a_label, SorT, colors):
+    def draw_tsne(self, a_USM, a_label, SorT, colors, epoch):
         tsne = TSNE(n_components=2, random_state=0)
 
         # Applying t-SNE transformation
@@ -360,7 +361,7 @@ class CVAE_USM(nn.Module):
         plt.xlabel('t-SNE 1')
         plt.ylabel('t-SNE 2')
         plt.legend()
-        plt.show()
+        plt.savefig('t-SNE-Visualization-' + SorT + '-' + str(epoch))
 
         return colors
 

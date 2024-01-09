@@ -117,8 +117,8 @@ for Lr_decay in [1.0]:  # 1.0, 0.8, 0.5
                     for ReverseLayer_latent_domain_alpha in [0.05, 0.1, 0.15, 0.2, 0.25,
                                                              0.3]:  # 0.2, 0.15, 0.25, 0.3, 0.1, 0.35
                         for lr in [5 * 1e-4, 1e-4, 5 * 1e-5, 1e-5]:  # 1e-2, 1e-1, 1e-3,1e-4, 1e-5, 1e-6
-                            for Variance in [1, 2, 0.7, 3, 0.4, 4, 5]:  # 1, 2, 0.7, 3, 0.4, 4, 5
-                                for num_sub_act in [5, 10, 15, 20, 25, 30, 35]:
+                            for Variance in [1, 2, 3, 4, 5]:  # 1, 2, 0.7, 3, 0.4, 4, 5
+                                for num_sub_act in [2, 5, 10, 15, 20, 25, 30, 35]:
                                     for Num_temporal_states in [num_sub_act,
                                                                 math.floor(num_sub_act * 1.5),
                                                                 math.floor(num_sub_act * 2),

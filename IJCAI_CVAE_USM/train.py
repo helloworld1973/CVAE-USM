@@ -49,7 +49,7 @@ def GPU_CVAE_USM_train(S_torch_loader, T_torch_loader, ST_torch_loader, global_e
                 for S_data in S_torch_loader:
                     for T_data in T_torch_loader:
                         step_vals, temporal_state_labels_S, temporal_state_labels_T = algorithm.update_GMM_clustering(
-                            ST_data, S_data, T_data, opt, device)
+                            ST_data, S_data, T_data, opt, round)
 
             algorithm.GPU_set_tlabel(S_torch_loader, T_torch_loader, temporal_state_labels_S, temporal_state_labels_T,
                                      device)

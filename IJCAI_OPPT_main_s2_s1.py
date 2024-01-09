@@ -4,23 +4,21 @@ from gtda.time_series import SlidingWindow
 import random
 from IJCAI_CVAE_USM.train import GPU_CVAE_USM_train
 import math
-
 from IJCAI_CVAE_USM.utils.util import log_and_print, GPU_get_CVAE_USM_train_data, matrix_to_string
 
 # /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-# PAMAP2_dataset
-activity_list = ['lying', 'sitting', 'standing', 'walking', 'running',
-                 'cycling', 'Nordic_walking', 'ascending_stairs', 'descending_stairs',
-                 'vacuum_cleaning', 'ironing']
-activities_required = activity_list  # ['lying', 'walking', 'ascending_stairs', 'descending_stairs']
-sensor_channels_required = ['IMU_Hand']  # ['IMU_Hand', 'IMU_Chest', 'IMU_Ankle']
-# activities_required = ['lying']  # ['lying', 'sitting', 'standing', 'walking', 'running'] # activity_list  # activity_list  # 12 common activities ['rope_jumping']
-source_user = '1'  # 1 # 5 # 6
-target_user = '6'
-Sampling_frequency = 100  # HZ
+# OPPT_dataset
+sensor_channels_required = ['IMU_RLA_ACC_X', 'IMU_RLA_ACC_Y', 'IMU_RLA_ACC_Z',
+                            'IMU_RLA_GYRO_X', 'IMU_RLA_GYRO_Y', 'IMU_RLA_GYRO_Z']  # right lower arm
+activity_list = ['Stand', 'Walk', 'Sit', 'Lie']
+DATASET_NAME = 'OPPT'
+activities_required = activity_list
+source_user = 'S2'
+target_user = 'S1'  # S3
+
+Sampling_frequency = 30  # HZ
 Num_Seconds = 3
 Window_Overlap_Rate = 0.5
-DATASET_NAME = 'PAMAP2'
 
 
 def sliding_window_seg(data_x, data_y):
@@ -62,7 +60,7 @@ for index, a_act in enumerate(activities_required):
         S_label = S_label + s_Y_bags
         T_data = np.vstack((T_data, t_X_bags))
         T_label = T_label + t_Y_bags
-
+print()
 S_label = [int(x) for x in S_label]
 T_label = [int(x) for x in T_label]
 # /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -72,10 +70,10 @@ T_label = [int(x) for x in T_label]
 # model training paras settings
 num_D = 6
 width = Sampling_frequency * Num_Seconds
-Num_classes = 11
+Num_classes = 4
 Epochs = 400
 Local_epoch = 1
-device = torch.device("cpu")  # "cuda:2"
+device = torch.device("cuda:1")  # "cuda:2"
 # /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 
@@ -99,30 +97,30 @@ Lr_decay = 1.0
 Optim_Adam_weight_decay = 5e-4
 Optim_Adam_beta = 0.5
 
-Alpha = 2  # RECON_L 2
-Beta = 1  # KLD_L 0.5
-Delta = 5  # DOMAIN_L 1
-Gamma = 5  # CLASS_L 1
-Epsilon = 10.0  # TEMPORAL_L 10
+Alpha = 5.0  # RECON_L
+Beta = 10.0  # KLD_L
+Delta = 5.0  # DOMAIN_L
+Gamma = 60.0  # CLASS_L # 30
+Epsilon = 60.0  # TEMPORAL_L
 # /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-file_name = str(DATASET_NAME) + '_' + str(source_user) + '_' + str(target_user) + '_CVAE_USM_6_1_complement.txt'
+file_name = str(DATASET_NAME) + '_' + str(source_user) + '_' + str(target_user) + '_CVAE_USM.txt'
 file_name_summary = str(DATASET_NAME) + '_' + str(source_user) + '_' + str(
-    target_user) + '_CVAE_USM_6_1_complement_summary.txt'
+    target_user) + '_CVAE_USM_summary.txt'
 
 for Lr_decay in [1.0]:  # 1.0, 0.8, 0.5
     for Optim_Adam_weight_decay in [5e-4]:  # 5e-4, 5e-3, 5e-2, 5e-1
-        for Optim_Adam_beta in [0.9]:  # 0.2, 0.5, 0.9
+        for Optim_Adam_beta in [0.2]:  # 0.2, 0.5, 0.9
             for Hidden_size in [100, 80, 50]:  # 100, 80, 50
                 for Dis_hidden in [50, 30, 20]:  # 50, 30, 20
                     for ReverseLayer_latent_domain_alpha in [0.05, 0.1, 0.15, 0.2, 0.25,
                                                              0.3]:  # 0.2, 0.15, 0.25, 0.3, 0.1, 0.35
                         for lr in [5 * 1e-4, 1e-4, 5 * 1e-5, 1e-5]:  # 1e-2, 1e-1, 1e-3,1e-4, 1e-5, 1e-6
-                            for Variance in [3, 4, 5, 6]:  # 1, 2, 0.7, 3, 0.4, 4, 5 # 1, 2, 0.7,
-                                for num_sub_act in [2, 3, 5, 10, 15, 20]:  # 5, 10, 25, 30, 35
-                                    for Num_temporal_states in [math.floor(num_sub_act * 0.7),
-                                                                num_sub_act,
-                                                                math.floor(num_sub_act * 1.2),
-                                                                math.floor(num_sub_act * 1.5)]:  # 2, 3, 4, 5, 6, 7
+                            for Variance in [1, 2, 3, 4, 5]:  # 1, 2, 0.7, 3, 0.4, 4, 5
+                                for num_sub_act in [2, 3, 4, 5, 10, 15]:
+                                    for Num_temporal_states in [num_sub_act,
+                                                                math.floor(num_sub_act * 1.5),
+                                                                math.floor(num_sub_act * 2),
+                                                                math.floor(num_sub_act * 2.5)]:  # 2, 3, 4, 5, 6, 7
                                         print('para_setting:' + str(num_sub_act) + '_' + str(
                                             Num_temporal_states) + '_' + str(
                                             Hidden_size) + '_' + str(Dis_hidden) + '_' + str(
