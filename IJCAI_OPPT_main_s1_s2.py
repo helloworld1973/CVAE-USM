@@ -73,7 +73,7 @@ width = Sampling_frequency * Num_Seconds
 Num_classes = 4
 Epochs = 400
 Local_epoch = 1
-device = torch.device("cuda:0")  # "cuda:2"
+device = torch.device("cpu")  # "cuda:2"
 # /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 
